@@ -1,0 +1,52 @@
+declare   
+ v_session_user_name VARCHAR2(255) := utl_pack.get_user_name;
+ P_USER_NAME VARCHAR2(255) := 'PS_OTITOCHKA_CLM_289998';
+BEGIN
+  utl_pack.set_user_name(p_user_name => P_USER_NAME);
+  FOR REC IN (select ph.subs_subs_id, c.clnt_id
+                from bis.subscribers s
+                join bis.phone_histories ph
+                  on s.subs_id = ph.subs_subs_id
+                 and ph.start_date <= sysdate
+                 and ph.end_date > sysdate
+                join bis.number_sets ns
+                  on ph.nset_nset_id = ns.nset_id
+                 and ns.nsts_nsts_id = 3
+                join bis.subs_clnt_histories sch
+                  on s.subs_id = sch.subs_subs_id
+                 and sch.start_date <= sysdate
+                 and sch.end_date > sysdate
+                join bis.clients c
+                  on sch.clnt_clnt_id = c.clnt_id
+                 and c.clim_clim_id = 4
+                join bis.client_histories ch
+                  on c.clnt_id = ch.clnt_clnt_id
+                 and ch.start_date <= sysdate
+                 and ch.end_date > sysdate
+                join bis.subs_histories suh
+                  on s.subs_id = suh.subs_subs_id
+                join bis.sim_histories sh
+                  on suh.scrd_scrd_id = sh.scrd_scrd_id
+                 and sh.start_date <= sysdate
+                 and sh.end_date > sysdate
+                join bis.sim_cards sc
+                  on sh.scrd_scrd_id = sc.scrd_id
+                left join bis.subs_adr_histories sa
+                  on s.subs_id = sa.subs_subs_id
+               where s.activation_date is not null
+                 and s.sbst_sbst_id = 2
+                 and sa.subs_subs_id is null
+                 and ch.assc_assc_id not in
+                    --(46434814,46434813,40000012,40005047,40004142,40000084) --prepaid demo
+                    (7000012,7005047,7000084,7004142) --production
+             ) 
+  LOOP
+    gc$custlc_assc_pg.Add_Subs_Addr(p_subs_id => REC.subs_subs_id, p_clnt_id => REC.clnt_id);
+  END LOOP;  
+  utl_pack.set_user_name(v_session_user_name);
+EXCEPTION
+  WHEN OTHERS THEN
+    utl_pack.set_user_name(v_session_user_name);
+    LITE_UPD_CLIENTS.RAISE_DETAIL_ERROR(PSQLCODE => SQLCODE);
+END;
+
